@@ -1,0 +1,9 @@
+version: '3.8'
+
+services:
+  app:
+    image: diantenx/belajar-cicd
+    container_name: belajar-cicd
+    restart: always
+    ports:
+      - '3000:3000'

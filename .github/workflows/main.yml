@@ -1,0 +1,45 @@
+name: Deploy to VPS
+on:
+  push:
+    branches: [master]
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment: dev
+    strategy:
+      matrix:
+        node-version: [22.x]
+
+    steps:
+      - name: Copy repository
+        uses: actions/checkout@v4
+
+      - name: Build and Package Docker Image
+        run: |
+          docker build -t diantenx/belajar-cicd .
+          docker save diantenx/belajar-cicd | gzip > app.tgz
+
+      - name: Transfer Docker Image to Server
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          source: 'docker-compose.yml,app.tgz'
+          target: /home/${{ secrets.USERNAME }}/app
+          timeout: 10m
+
+      - name: Connect to Server and Deploy
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.KEY }}
+          port: ${{ secrets.PORT }}
+          script: |
+            cd ~/app
+            tar -xzf app.tgz
+            docker load -i app.tgz
+            docker compose up --detach --remove-orphans --wait
